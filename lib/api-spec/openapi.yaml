@@ -1,0 +1,827 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: subjects
+    description: Subject and chapter operations
+  - name: questions
+    description: Question operations
+  - name: quiz
+    description: Quiz session operations
+  - name: stats
+    description: User statistics and streak operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /subjects:
+    get:
+      operationId: getSubjects
+      tags: [subjects]
+      summary: List all subjects
+      responses:
+        "200":
+          description: List of subjects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subject"
+
+  /subjects/{subjectId}/chapters:
+    get:
+      operationId: getChapters
+      tags: [subjects]
+      summary: List chapters for a subject
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of chapters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Chapter"
+
+  /questions:
+    get:
+      operationId: getQuestions
+      tags: [questions]
+      summary: Get questions for a chapter
+      parameters:
+        - name: chapterId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: count
+          in: query
+          required: true
+          schema:
+            type: integer
+            enum: [10, 20, 30]
+        - name: difficulty
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [easy, medium, hard, mixed]
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+  /questions/generate:
+    post:
+      operationId: generateQuestions
+      tags: [questions]
+      summary: Generate questions on any topic using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateQuestionsBody"
+      responses:
+        "200":
+          description: AI-generated questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+  /questions/more:
+    post:
+      operationId: getMoreQuestions
+      tags: [questions]
+      summary: Get more questions on the same concept using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetMoreQuestionsBody"
+      responses:
+        "200":
+          description: Additional questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+  /quiz-sessions:
+    post:
+      operationId: createQuizSession
+      tags: [quiz]
+      summary: Start a new quiz session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuizSessionBody"
+      responses:
+        "201":
+          description: Quiz session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSession"
+
+  /quiz-sessions/{sessionId}:
+    get:
+      operationId: getQuizSession
+      tags: [quiz]
+      summary: Get quiz session details
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz session details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSessionDetail"
+        "404":
+          description: Session not found
+
+  /quiz-sessions/{sessionId}/answers:
+    post:
+      operationId: submitAnswer
+      tags: [quiz]
+      summary: Submit an answer for a question
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAnswerBody"
+      responses:
+        "200":
+          description: Answer recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResult"
+
+  /quiz-sessions/{sessionId}/complete:
+    post:
+      operationId: completeQuizSession
+      tags: [quiz]
+      summary: Complete a quiz session and get results
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz completed with results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResults"
+
+  /quiz-sessions/{sessionId}/answer-key:
+    get:
+      operationId: getAnswerKey
+      tags: [quiz]
+      summary: Get the full answer key for a session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Answer key with explanations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnswerKeyItem"
+
+  /user-stats:
+    get:
+      operationId: getUserStats
+      tags: [stats]
+      summary: Get user statistics and streak info
+      responses:
+        "200":
+          description: User stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+
+  /user-stats/check-in:
+    post:
+      operationId: dailyCheckIn
+      tags: [stats]
+      summary: Record daily check-in and update streak
+      responses:
+        "200":
+          description: Updated streak info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreakInfo"
+
+  /user-stats/leaderboard:
+    get:
+      operationId: getStreakLeaderboard
+      tags: [stats]
+      summary: Get top streaks leaderboard
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /user-stats/profile:
+    patch:
+      operationId: updateProfile
+      tags: [stats]
+      summary: Update user profile (name and exam type)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+
+  /user-stats/analytics:
+    get:
+      operationId: getAnalytics
+      tags: [stats]
+      summary: Get detailed analytics for the user
+      responses:
+        "200":
+          description: Detailed analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analytics"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Subject:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        totalChapters:
+          type: integer
+        totalQuestions:
+          type: integer
+      required:
+        - id
+        - name
+        - icon
+        - color
+        - totalChapters
+        - totalQuestions
+
+    Chapter:
+      type: object
+      properties:
+        id:
+          type: integer
+        subjectId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        totalQuestions:
+          type: integer
+        easyCount:
+          type: integer
+        mediumCount:
+          type: integer
+        hardCount:
+          type: integer
+      required:
+        - id
+        - subjectId
+        - name
+        - description
+        - totalQuestions
+        - easyCount
+        - mediumCount
+        - hardCount
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        chapterId:
+          type: integer
+        text:
+          type: string
+        diagram:
+          type: ["string", "null"]
+          description: ASCII/text diagram shown above the question (circuits, graphs, figures, etc.)
+        options:
+          type: array
+          items:
+            type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        year:
+          type: ["integer", "null"]
+        source:
+          type: string
+        concept:
+          type: string
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+      required:
+        - id
+        - chapterId
+        - text
+        - diagram
+        - options
+        - difficulty
+        - year
+        - source
+        - concept
+        - correctOption
+        - explanation
+
+    GenerateQuestionsBody:
+      type: object
+      properties:
+        topic:
+          type: string
+        count:
+          type: integer
+          enum: [10, 20, 30]
+        difficulty:
+          type: string
+          enum: [easy, medium, hard, mixed]
+      required:
+        - topic
+        - count
+        - difficulty
+
+    GetMoreQuestionsBody:
+      type: object
+      properties:
+        concept:
+          type: string
+        chapterId:
+          type: integer
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        excludeIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - concept
+        - chapterId
+        - difficulty
+        - excludeIds
+
+    CreateQuizSessionBody:
+      type: object
+      properties:
+        chapterId:
+          type: integer
+        questionCount:
+          type: integer
+          enum: [10, 20, 30]
+        difficulty:
+          type: string
+          enum: [easy, medium, hard, mixed]
+        questionIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - chapterId
+        - questionCount
+        - difficulty
+        - questionIds
+
+    QuizSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        chapterId:
+          type: integer
+        questionCount:
+          type: integer
+        difficulty:
+          type: string
+        status:
+          type: string
+          enum: [active, completed]
+        startedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - chapterId
+        - questionCount
+        - difficulty
+        - status
+        - startedAt
+
+    QuizSessionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        chapterId:
+          type: integer
+        questionCount:
+          type: integer
+        difficulty:
+          type: string
+        status:
+          type: string
+          enum: [active, completed]
+        startedAt:
+          type: string
+          format: date-time
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionAnswer"
+      required:
+        - id
+        - chapterId
+        - questionCount
+        - difficulty
+        - status
+        - startedAt
+        - questions
+        - answers
+
+    SessionAnswer:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        selectedOption:
+          type: ["integer", "null"]
+        isCorrect:
+          type: ["boolean", "null"]
+        timeTakenSeconds:
+          type: number
+      required:
+        - questionId
+        - selectedOption
+        - isCorrect
+        - timeTakenSeconds
+
+    SubmitAnswerBody:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        selectedOption:
+          type: integer
+        timeTakenSeconds:
+          type: number
+      required:
+        - questionId
+        - selectedOption
+        - timeTakenSeconds
+
+    AnswerResult:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        isCorrect:
+          type: boolean
+        correctOption:
+          type: integer
+      required:
+        - questionId
+        - isCorrect
+        - correctOption
+
+    QuizResults:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+        totalQuestions:
+          type: integer
+        correctCount:
+          type: integer
+        wrongCount:
+          type: integer
+        skippedCount:
+          type: integer
+        totalTimeSeconds:
+          type: number
+        averageTimeSeconds:
+          type: number
+        score:
+          type: number
+        currentStreak:
+          type: integer
+        bestStreak:
+          type: integer
+      required:
+        - sessionId
+        - totalQuestions
+        - correctCount
+        - wrongCount
+        - skippedCount
+        - totalTimeSeconds
+        - averageTimeSeconds
+        - score
+        - currentStreak
+        - bestStreak
+
+    AnswerKeyItem:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctOption:
+          type: integer
+        selectedOption:
+          type: ["integer", "null"]
+        isCorrect:
+          type: ["boolean", "null"]
+        explanation:
+          type: string
+        year:
+          type: ["integer", "null"]
+        source:
+          type: string
+        difficulty:
+          type: string
+      required:
+        - questionId
+        - questionText
+        - options
+        - correctOption
+        - selectedOption
+        - isCorrect
+        - explanation
+        - year
+        - source
+        - difficulty
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        examType:
+          type: ["string", "null"]
+          enum: [JEE, NEET, UPSC, SSC, null]
+      required: []
+
+    UserStats:
+      type: object
+      properties:
+        name:
+          type: string
+        examType:
+          type: ["string", "null"]
+        totalQuestionsAttempted:
+          type: integer
+        totalCorrect:
+          type: integer
+        totalWrong:
+          type: integer
+        accuracy:
+          type: number
+        currentDayStreak:
+          type: integer
+        bestDayStreak:
+          type: integer
+        currentCorrectStreak:
+          type: integer
+        bestCorrectStreak:
+          type: integer
+        lastCheckIn:
+          type: ["string", "null"]
+          format: date-time
+        weeklyActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyActivity"
+      required:
+        - name
+        - examType
+        - totalQuestionsAttempted
+        - totalCorrect
+        - totalWrong
+        - accuracy
+        - currentDayStreak
+        - bestDayStreak
+        - currentCorrectStreak
+        - bestCorrectStreak
+        - lastCheckIn
+        - weeklyActivity
+
+    Analytics:
+      type: object
+      properties:
+        thirtyDayActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyActivity"
+        subjectPerformance:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubjectPerformance"
+        difficultyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/DifficultyBreakdown"
+        totalSessions:
+          type: integer
+        totalTimeMinutes:
+          type: number
+      required:
+        - thirtyDayActivity
+        - subjectPerformance
+        - difficultyBreakdown
+        - totalSessions
+        - totalTimeMinutes
+
+    SubjectPerformance:
+      type: object
+      properties:
+        subjectName:
+          type: string
+        subjectColor:
+          type: string
+        correct:
+          type: integer
+        wrong:
+          type: integer
+        total:
+          type: integer
+        accuracy:
+          type: number
+      required:
+        - subjectName
+        - subjectColor
+        - correct
+        - wrong
+        - total
+        - accuracy
+
+    DifficultyBreakdown:
+      type: object
+      properties:
+        difficulty:
+          type: string
+        correct:
+          type: integer
+        wrong:
+          type: integer
+        total:
+          type: integer
+      required:
+        - difficulty
+        - correct
+        - wrong
+        - total
+
+    DailyActivity:
+      type: object
+      properties:
+        date:
+          type: string
+        questionsAttempted:
+          type: integer
+        correctCount:
+          type: integer
+      required:
+        - date
+        - questionsAttempted
+        - correctCount
+
+    StreakInfo:
+      type: object
+      properties:
+        currentDayStreak:
+          type: integer
+        bestDayStreak:
+          type: integer
+        message:
+          type: string
+      required:
+        - currentDayStreak
+        - bestDayStreak
+        - message
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        name:
+          type: string
+        dayStreak:
+          type: integer
+        totalQuestions:
+          type: integer
+      required:
+        - rank
+        - name
+        - dayStreak
+        - totalQuestions
